@@ -1,0 +1,116 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Linq" #>
+<#@ output extension=".generated.cs" #>
+<#
+var basicTypes = new[]
+{
+    ("double", "double"),
+    ("bool", "bool"),
+    ("string", "string"),
+    ("char", "char"),
+    ("DateTime", "DateTime"),
+    ("DateTimeOffset", "DateTimeOffset")
+};
+var types = new[]
+{
+    ("byte", "double"),
+    ("sbyte", "double"),
+    ("short", "double"),
+    ("ushort", "double"),
+    ("int", "double"),
+    ("uint", "double"),
+    ("long", "double"),
+    ("ulong", "double"),
+    ("float", "double"),
+    ("decimal", "double"),
+};
+var allTypes = basicTypes.Concat(types).ToArray();
+var valueTypes = allTypes.Where(x => x.Item1 != "string").ToArray();
+var refTypes = allTypes.Where(x => x.Item1 == "string").ToArray(); #>
+#nullable enable
+using System;
+using System.Diagnostics.CodeAnalysis;
+
+namespace Sssl
+{
+    public partial class DefaultSsslConverter
+    {
+        private bool TryConvertFromGenerated(object value, [NotNullWhen(true)] out SsslObject result)
+        {
+            switch (value)
+            {
+<# foreach (var (t1, t2) in basicTypes) { #>
+                case <#= t1 #> v:
+                    result = ConvertFrom(v);
+                    return true;
+<# } #>
+<# foreach (var (t1, t2) in types) { #>
+                case <#= t1 #> v:
+                    result = ConvertFrom((<#= t2 #>)v);
+                    return true;
+<# } #>
+                default:
+                    result = null!;
+                    return false;
+            }
+        }
+
+        private bool TryConvertToGenerated(SsslObject ssslObject, Type type, out object? result)
+        {
+<# foreach (var (t1, t2) in basicTypes) { #>
+            if (type == typeof(<#= t1 #>))
+            {
+                var canConvert = TryConvertTo(ssslObject, out <#= t2 #> val);
+                result = canConvert ? (object)val : null!;
+                return canConvert;
+            }
+
+<# } #>
+<# foreach (var (t1, t2) in types) { #>
+            if (type == typeof(<#= t1 #>))
+            {
+                var canConvert = TryConvertTo(ssslObject, out <#= t2 #> val);
+                result = canConvert ? (object)(<#= t1 #>)val : null!;
+                return canConvert;
+            }
+
+<# } #>
+            result = null;
+            return false;
+        }
+    }
+
+    public partial class SsslObject
+    {
+<# foreach (var (t1, _) in valueTypes) { #>
+        public static explicit operator <#= t1 #>(SsslObject value) => SsslConverter.Default.ConvertTo<<#= t1 #>>(value);
+
+        public static explicit operator <#= t1 #>?(SsslObject value) => SsslConverter.Default.ConvertTo<<#= t1 #>?>(value);
+
+        public static explicit operator <#= t1 #>[](SsslObject value) => SsslConverter.Default.ConvertTo<<#= t1 #>[]>(value);
+
+<# } #>
+<# foreach (var (t1, _) in refTypes) { #>
+        public static explicit operator <#= t1 #>(SsslObject value) => SsslConverter.Default.ConvertTo<<#= t1 #>>(value);
+
+        public static explicit operator <#= t1 #>[](SsslObject value) => SsslConverter.Default.ConvertTo<<#= t1 #>[]>(value);
+
+<# } #>
+<# foreach (var (t1, _) in valueTypes) { #>
+        public static implicit operator SsslObject(<#= t1 #> value) => SsslConverter.Default.ConvertFrom(value);
+
+        public static implicit operator SsslObject(<#= t1 #>? value) => SsslConverter.Default.ConvertFrom(value);
+
+        public static implicit operator SsslObject(<#= t1 #>[] value) => SsslConverter.Default.ConvertFrom(value);
+
+<# } #>
+<# foreach (var (t1, _) in refTypes) { #>
+        public static implicit operator SsslObject(<#= t1 #>? value) => SsslConverter.Default.ConvertFrom(value);
+
+        public static implicit operator SsslObject(<#= t1 #>[] value) => SsslConverter.Default.ConvertFrom(value);
+
+<# } #>
+    }
+}
