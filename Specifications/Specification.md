@@ -3,7 +3,7 @@
 ## Abstract
 
 SSSL (acronym for "Simple Structure Serialization Language", but it was added afterwards) is a language-independent data interchange format.
-It was designed as superset of JSON (JavaScript Object Notation).
+SSSL is designed as a superset of JSON (JavaScript Object Notation), and as an alternative to XAML (Extensible Application Markup Language).
 
 ## Grammar Summary
 
