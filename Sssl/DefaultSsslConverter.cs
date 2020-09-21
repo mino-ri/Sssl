@@ -55,6 +55,7 @@ namespace Sssl
             {
                 SsslObject ssslObject => Success(ssslObject, out result),
                 SsslDynamicProvider ssslDynamic => Success(ssslDynamic.GetSource(), out result),
+                Enum e => TryConvertFromEnum(e, out result),
                 ITuple t => TryConvertFromTuple(t, out result),
                 IDictionary d => TryConvertFromDictionary(d, out result),
                 IEnumerable e => TryConvertFromEnumerable(e, out result),
@@ -66,6 +67,9 @@ namespace Sssl
         {
             if (TryConvertToRaw(ssslObject, type, out result) ||
                 TryConvertToGenerated(ssslObject, type, out result))
+                return true;
+
+            if (TryConvertToEnum(ssslObject, type, out result))
                 return true;
 
             if (type.IsGenericType && (TryConvertToTuple(ssslObject, type, out result) ||
@@ -88,6 +92,14 @@ namespace Sssl
         public SsslObject ConvertFrom(DateTime value) => new SsslValue(value.ToString(CultureInfo.InvariantCulture));
 
         public SsslObject ConvertFrom(DateTimeOffset value) => new SsslValue(value.ToString(CultureInfo.InvariantCulture));
+
+        public bool TryConvertFromEnum(Enum @enum, [NotNullWhen(true)] out SsslObject result)
+        {
+            result = Enum.IsDefined(@enum.GetType(), @enum)
+                ? new SsslValue(@enum.ToString())
+                : new SsslValue(Convert.ToInt32(@enum));
+            return true;
+        }
 
         public bool TryConvertFromKeyValuePair(object pair, [NotNullWhen(true)] out SsslObject result)
         {
@@ -209,6 +221,21 @@ namespace Sssl
             result = default;
             return TryConvertTo(ssslObject, out string str) && 
                    DateTimeOffset.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None, out result);
+        }
+
+        public bool TryConvertToEnum(SsslObject ssslObject, Type type, [NotNullWhen(true)] out object result)
+        {
+            if (ssslObject is SsslValue value)
+            {
+                return value.Type switch
+                {
+                    SsslValueType.Number => Enum.TryParse(type, value.Value!.ToString(), out result),
+                    SsslValueType.String => Enum.TryParse(type, value.Value!.ToString(), out result),
+                    _ => Failure(out result),
+                };
+            }
+            else
+                return Failure(out result);
         }
 
         public bool TryConvertToKeyValuePair(SsslObject ssslObject, Type type, [NotNullWhen(true)] out object result)

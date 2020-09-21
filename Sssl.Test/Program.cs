@@ -13,6 +13,7 @@ namespace Sssl.Test
                 Int = 12,
                 Double = 12.6,
                 Bool = false,
+                DayOfWeek = DayOfWeek.Monday,
                 Tuple = (12, "abc"),
                 Obj = new
                 {
