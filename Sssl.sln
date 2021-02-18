@@ -5,7 +5,11 @@ VisualStudioVersion = 16.0.29519.181
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sssl", "Sssl\Sssl.csproj", "{D1467C87-464C-41A4-9A06-539867A6FA91}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sssl.Test", "Sssl.Test\Sssl.Test.csproj", "{1547A981-39C7-483A-AC7B-0CAA8FD25B1A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sssl.Test", "Sssl.Test\Sssl.Test.csproj", "{1547A981-39C7-483A-AC7B-0CAA8FD25B1A}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "SsslFSharp", "SsslFSharp\SsslFSharp.fsproj", "{7A8B8D7C-BDAF-4D90-B11C-4F58C393451B}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SsslFSharp.Test", "SsslFSharp.Test\SsslFSharp.Test.fsproj", "{7E1952B0-DE95-4182-B9A4-BEF995CB8BFF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +25,14 @@ Global
 		{1547A981-39C7-483A-AC7B-0CAA8FD25B1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1547A981-39C7-483A-AC7B-0CAA8FD25B1A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1547A981-39C7-483A-AC7B-0CAA8FD25B1A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A8B8D7C-BDAF-4D90-B11C-4F58C393451B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A8B8D7C-BDAF-4D90-B11C-4F58C393451B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A8B8D7C-BDAF-4D90-B11C-4F58C393451B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A8B8D7C-BDAF-4D90-B11C-4F58C393451B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E1952B0-DE95-4182-B9A4-BEF995CB8BFF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E1952B0-DE95-4182-B9A4-BEF995CB8BFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E1952B0-DE95-4182-B9A4-BEF995CB8BFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E1952B0-DE95-4182-B9A4-BEF995CB8BFF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
