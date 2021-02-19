@@ -20,13 +20,23 @@ let writeTo textWriter format (sssl: Sssl) = sssl.WriteTo(textWriter, format)
 
 let parse text = (SsslParser(text)).Parse()
 
-let tryConvertTo<'T> sssl = SsslConverter.defaultConverter.TryConvertTo<'T>(sssl)
+let converter = SsslConverter.defaultConverter
 
-let tryConvertFrom<'T> value = SsslConverter.defaultConverter.TryConvertFrom<'T>(value)
+let tryConvertTo<'T> sssl = converter.TryConvertTo<'T>(sssl)
 
-let convertTo<'T> sssl = SsslConverter.defaultConverter.ConvertTo<'T>(sssl)
+let tryConvertFrom<'T> value = converter.TryConvertFrom<'T>(value)
 
-let convertFrom<'T> (value: 'T) = SsslConverter.defaultConverter.ConvertFrom(box value, typeof<'T>)
+let convertTo<'T> sssl = converter.ConvertTo<'T>(sssl)
+
+let convertFrom<'T> (value: 'T) = converter.ConvertFrom(box value, typeof<'T>)
+
+let tryConvertToObj resultType sssl = converter.TryConvertTo(sssl, resultType)
+
+let tryConvertFromObj valueType (value: obj) = converter.TryConvertFrom(value, valueType)
+
+let convertToObj resultType sssl = converter.ConvertTo(sssl, resultType)
+
+let convertFromObj valueType (value: obj) = converter.ConvertFrom(box value, valueType)
 
 let loadFromReader (textReader: TextReader) = parse <| textReader.ReadToEnd()
     
