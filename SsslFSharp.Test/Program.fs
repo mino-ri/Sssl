@@ -31,12 +31,27 @@ type TestSum =
 type TestSingle = TestSingle of string * int
 
 let test (value: 'T) =
-    doOption {
-        let! sssl = Sssl.tryConvertFrom<'T> value
-        printfn "%O" sssl
-        let! back = Sssl.tryConvertTo<'T> sssl
-        printfn "%b" <| EqualityComparer<'T>.Default.Equals(value, back)
-    }
+    try
+        doOption {
+            let! sssl = Sssl.tryConvertFrom<'T> value
+            let text = sssl.ToString()
+            printfn "%s" text
+            let backSssl = Sssl.parse text
+            let! back = Sssl.tryConvertTo<'T> backSssl
+            printfn "%b" <| EqualityComparer<'T>.Default.Equals(value, back)
+        }
+    with SsslParseException(message, source, index) ->
+        Console.ForegroundColor <- ConsoleColor.Yellow
+        printfn "%s" message
+        if index > 1 then
+            Console.ResetColor()
+            printf "%s" source.[..index - 1]
+        Console.ForegroundColor <- ConsoleColor.Red
+        if index >= source.Length || " \r\n\t".Contains(source.[index])
+        then printf "_"
+        else printf "%c" source.[index]
+        Console.ResetColor()
+        printfn "%s" (if index >= source.Length then "" else source.[index + 1..])
     printfn ""
 
 [<EntryPoint>]

@@ -49,7 +49,9 @@ let loadFromFile path =
 let saveToWriter format textWriter (sssl: Sssl) = sssl.WriteTo(textWriter, format)
 
 let saveToStream format (stream: Stream) sssl =
-    saveToWriter format (new StreamWriter(stream, Encoding.UTF8)) sssl
+    use writer = new StreamWriter(stream, Encoding.UTF8)
+    saveToWriter format writer sssl
+    writer.Flush()
 
 let saveToFile format path sssl =
     use stream = File.Create(path)

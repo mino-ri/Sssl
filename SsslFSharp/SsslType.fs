@@ -24,7 +24,7 @@ let getNameFrom (expected: Type) (ty: Type) =
     let bindingFlags = BindingFlags.Public ||| BindingFlags.NonPublic
     if expected = ty then ""
     elif (if expected.IsGenericType
-          then expected.GetNestedTypes(bindingFlags) |> Array.exists ty.IsGenericOf 
+          then expected.GetNestedTypes(bindingFlags) |> Array.exists ty.IsGenericOf
           else expected.GetNestedTypes(bindingFlags) |> Array.contains ty) then ty.Name
     else getName expected.Assembly ty
 

@@ -3,7 +3,14 @@ open System
 open System.Globalization
 open System.Text
 
-exception SsslParseException of message: string * sourceText: string * index: int
+exception SsslParseException of message: string * sourceText: string * index: int with
+    override this.Message =
+        let beginIndex = max 0 (this.index - 10)
+        let endIndex = min (this.sourceText.Length - 1) (this.index + 10)
+        this.message + $"\r\nindex: %i{this.index}\r\n" +
+        this.sourceText.[beginIndex..endIndex].Replace('\n', ' ').Replace('\r', ' ').Replace('\t', ' ') +
+        "\r\n" + String(' ', this.index - beginIndex) + "^"
+
 
 type internal SsslParser(source: string) =
     let builder = StringBuilder()
@@ -14,7 +21,7 @@ type internal SsslParser(source: string) =
     static let isHex c = '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
 
     static let isIdHead c =
-        c = '_' || c = '$' || 
+        c = '_' || c = '$' ||
         match Char.GetUnicodeCategory(c) with
         | UnicodeCategory.UppercaseLetter
         | UnicodeCategory.LowercaseLetter
@@ -70,7 +77,7 @@ type internal SsslParser(source: string) =
             consume c
             c <- getCurrent()
         if c = '0' then consume c
-        if '1' <= c && c <= '9' then consumeWhile isDigit
+        elif '1' <= c && c <= '9' then consumeWhile isDigit
         else error "Digits are required."
         // read fraction
         c <- getCurrent()
@@ -124,6 +131,7 @@ type internal SsslParser(source: string) =
             else c
             |> builder.Append |> ignore
             index <- index + 1
+            if index >= source.Length then error "End of string end not found."
             c <- getCurrent()
         index <- index + 1
         skipSpace()
@@ -156,6 +164,7 @@ type internal SsslParser(source: string) =
                     index <- index + 1
                     skipSpace()
                     readContent()
+        readContent()
         index <- index + 1
         skipSpace()
         Sssl.Record(name, recordType, contents.ToArray())
@@ -183,8 +192,8 @@ type internal SsslParser(source: string) =
                 match getCurrent() with
                 | ':' -> this.GetPair(name)
                 | '(' | '{' | '[' -> this.GetRecord(name)
-                | _ -> error "Unknown token."
-        | _ -> error "Unknown token."
+                | _ -> error "Unknown token in literal."
+        | _ -> error "Unknown token in value."
 
     member this.Parse() =
         skipSpace()

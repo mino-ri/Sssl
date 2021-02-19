@@ -188,7 +188,7 @@ let rawCnv =
         member _.TryConvertTo(_, sssl, expected) =
             let (|TargetType|_|) (t: Type) = if typeof<Sssl>.IsAssignableFrom(t) then Some() else None
             match sssl, expected with
-            | Sssl.Pair(SsslType.Load expected TargetType, sssl), _ 
+            | Sssl.Pair(SsslType.Load expected TargetType, sssl), _
             | sssl, TargetType -> Some(box sssl)
             | _ -> None
     }
