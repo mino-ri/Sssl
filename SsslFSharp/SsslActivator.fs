@@ -1,6 +1,5 @@
 ﻿module internal SsslFSharp.SsslActivator
 open System
-open System.Collections
 open System.Collections.Generic
 open System.Collections.Concurrent
 open System.Linq.Expressions
@@ -26,36 +25,50 @@ let createTuple (t: Type) (args: obj[]) =
     tupleConstructorCache.GetOrAdd(t, createTupleConstructor).Invoke(args)
 
 // KeyValuePair
-let private kvPairExtractorCache = ConcurrentDictionary<Type, Func<obj, string * obj>>()
+let private kvPairExtractorCache = ConcurrentDictionary<Type, Func<obj, obj * obj>>()
 
-let createKeyValuePair valueType (key: string) (value: obj) =
-    createTuple
-        (typedefof<KeyValuePair<_, _>>.MakeGenericType(typeof<string>, valueType))
-        [| box key; value |]
+let createKeyValuePair pairType (key: obj) (value: obj) =
+    createTuple pairType [| key; value |]
 
 let private createKvPairExtractor (pairType: Type) =
-    let ctor = typeof<string * obj>.GetConstructor([| typeof<string>; typeof<obj> |])
+    let ctor = typeof<obj * obj>.GetConstructor([| typeof<obj>; typeof<obj> |])
     let pair = parameter<obj> "pair"
     let converted = pair |> convertOf pairType
     Expression.New(ctor,
-        Expression.Property(converted, "Key"),
+        Expression.Property(converted, "Key") |> convert<obj>,
         Expression.Property(converted, "Value") |> convert<obj>)
-    |> compile<Func<obj, string * obj>> [| pair |]
+    |> compile<Func<obj, obj * obj>> [| pair |]
 
 let (|DynamicKeyValue|_|) (pair: obj) =
     let pairType = pair.GetType()
-    if pairType.IsGenericOf(typedefof<KeyValuePair<_, _>>) && pairType.TypeArgs.[0] = typeof<string>
-    then Some(kvPairExtractorCache.GetOrAdd(pairType.TypeArgs.[1], createKvPairExtractor).Invoke(pair))
+    if pairType.IsGenericOf(typedefof<KeyValuePair<_, _>>)
+    then Some(kvPairExtractorCache.GetOrAdd(pairType, createKvPairExtractor).Invoke(pair))
     else None
 
 // Collection
 let private collectionConstructorCache = ConcurrentDictionary<Type, Func<Array, obj>>()
 
 let private createCollectionConstructor (t: Type) (itemType: Type) =
-    let ctor = t.GetConstructor([| typeof<IEnumerable<_>>.MakeGenericType(itemType) |])
+    let argType = typedefof<IEnumerable<_>>.MakeGenericType(itemType)
+    let ctor = t.GetConstructor([| argType |])
     let source = parameter<Array> "source"
-    Expression.New(ctor, source)
+    Expression.New(ctor, source |> convertOf argType)
+    |> convert<obj>
     |> compile<Func<Array, obj>> [| source |]
 
 let createCollection (t: Type) (itemType: Type) (source: Array) =
     collectionConstructorCache.GetOrAdd(t, (fun t -> createCollectionConstructor t itemType)).Invoke(source)
+
+let private getDefaultCache = ConcurrentDictionary<Type, obj>()
+
+let private createDefault t =
+    let getter =
+        Expression.Default(t)
+        |> convert<obj>
+        |> compile<Func<obj>> (array.Empty())
+    getter.Invoke()
+
+let getDefault (t: Type) =
+    if t.IsNullable
+    then null
+    else getDefaultCache.GetOrAdd(t, createDefault)

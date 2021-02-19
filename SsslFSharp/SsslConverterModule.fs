@@ -67,19 +67,32 @@ let pairCnv =
                 let pairType = value.GetType()
                 let! name, v = SsslActivator.(|DynamicKeyValue|_|) value
                 let! valueSssl = converter.TryConvertFrom(v, pairType.TypeArgs.[1])
-                return Sssl.Pair(name, valueSssl) |> SsslType.wrapTyped expected pairType
+                if pairType.TypeArgs.[0] = typeof<string> then
+                    return Sssl.Pair(name :?> string, valueSssl) |> SsslType.wrapTyped expected pairType
+                else
+                    let! nameSssl = converter.TryConvertFrom(name, pairType.TypeArgs.[0])
+                    let typeName = SsslType.getNameFrom expected pairType
+                    return Sssl.Record(typeName, SsslRecordType.Parentheses, [| nameSssl; valueSssl |])
             }
     
         member _.TryConvertTo(converter, sssl, expected) =
             let (|TargetType|_|) (t: Type) =
-                if t.IsGenericOf(typedefof<KeyValuePair<_, _>>) && t.TypeArgs.[0] = typeof<string>
-                then Some(t.TypeArgs.[1])
+                if t.IsGenericOf(typedefof<KeyValuePair<_, _>>)
+                then Some(t.TypeArgs.[0], t.TypeArgs.[1])
                 else None
+            let makePairType k v = typedefof<KeyValuePair<_, _>>.MakeGenericType(k, v)
             match sssl, expected with
-            | Sssl.Pair(SsslType.Load expected (TargetType(t)), Sssl.Pair(name, value)), _
-            | Sssl.Pair(name, value), TargetType(t) ->
-                converter.TryConvertTo(value, t.TypeArgs.[1])
-                |> Option.map (SsslActivator.createKeyValuePair t name)
+            | Sssl.Pair(SsslType.Load expected (TargetType(kType, vType)), Sssl.Pair(name, value)), _
+            | Sssl.Pair(name, value), TargetType(kType, vType) when kType = typeof<string> ->
+                converter.TryConvertTo(value, vType)
+                |> Option.map (SsslActivator.createKeyValuePair (makePairType kType vType) name)
+            | Sssl.Record(SsslType.Load expected (TargetType(kType, vType)), _, contents), _
+            | Sssl.Record("", _, contents), TargetType(kType, vType) when contents.Length = 2 ->
+                option {
+                    let! key = converter.TryConvertTo(contents.[0], kType)
+                    let! value = converter.TryConvertTo(contents.[1], vType)
+                    return SsslActivator.createKeyValuePair (makePairType kType vType) key value
+                }
             | _ -> None
     }
 
@@ -94,9 +107,7 @@ let tupleCnv =
                         tupleType.TypeArgs
                         |> Seq.mapi (fun i t -> tuple.[i], t)
                         |> chooseAll converter.TryConvertFrom
-                    let typeName =
-                        if tupleType = expected then ""
-                        else SsslType.getName expected.Assembly tupleType
+                    let typeName = SsslType.getNameFrom expected tupleType
                     return Sssl.Record(typeName, SsslRecordType.Parentheses, contents.ToArray())
             }
     
@@ -121,7 +132,7 @@ let dictionaryCnv =
                 let! lst = chooseAllE (fun item -> converter.TryConvertFrom(item, itemType)) enm
                 let name =
                     if itemType = getItemType expected then ""
-                    else SsslType.getName expected.Assembly (itemType.MakeArrayType())
+                    else SsslType.getName expected.Assembly (getConcreteType itemType)
                 return Sssl.Record(name, SsslRecordType.Brackets, lst.ToArray())
             }
     
@@ -234,7 +245,7 @@ let addBaseValues options builder =
 let addPrimitiveValues builder =
     builder
     |> addWhen typeof<ITuple>.IsAssignableFrom tupleCnv
-    |> addWhen (fun t -> t.IsGenericOf(typedefof<KeyValuePair<_, _>>) && t.TypeArgs.[0] = typeof<string>) pairCnv
+    |> addWhen (fun t -> t.IsGenericOf(typedefof<KeyValuePair<_, _>>)) pairCnv
     |> addWhen (fun t -> t.IsEnum) enumCnv
     |> addRange [
         typeof<bool>, boolCnv

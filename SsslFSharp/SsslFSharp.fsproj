@@ -14,8 +14,9 @@
     <Compile Include="ExprHelper.fs" />
     <Compile Include="BoolOption.fs" />
     <Compile Include="Attributes.fs" />
-    <Compile Include="SsslObjectModel.fs" />
     <Compile Include="SsslActivator.fs" />
+    <Compile Include="SsslObjectModel.fs" />
+    <Compile Include="SsslRecordModel.fs" />
     <Compile Include="Serialization.fs" />
     <Compile Include="Sssl.fs" />
     <Compile Include="SsslType.fs" />

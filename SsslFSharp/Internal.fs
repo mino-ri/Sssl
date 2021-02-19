@@ -4,7 +4,11 @@ open System
 open System.Collections
 open System.Collections.Generic
 
-let (|SCons|SEmpty|) (e: IEnumerator<'T>) =
+let isNotNull x = not (isNull x)
+
+let isNotNullf x = not (isNull (box x))
+
+let private (|SCons|SEmpty|) (e: IEnumerator<'T>) =
     if e.MoveNext() then SCons(e.Current, e) else SEmpty
 
 let chooseAll (chooser: 'T -> 'U option) (source: seq<'T>) =
@@ -20,7 +24,7 @@ let chooseAll (chooser: 'T -> 'U option) (source: seq<'T>) =
     use enumerator = source.GetEnumerator()
     recSelf enumerator
 
-let (|ECons|EEmpty|) (e: IEnumerator) =
+let private (|ECons|EEmpty|) (e: IEnumerator) =
     if e.MoveNext() then ECons(e.Current, e) else EEmpty
 
 let chooseAllE (chooser: obj -> 'T option) (source: IEnumerable) =

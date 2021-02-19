@@ -19,24 +19,24 @@ type internal ObjectModelInfo =
       RequiredValues: Map<string, Type> }
 
 
-[<Sealed>]
-type internal SsslObjectModel<'T> private () =
-//    static let modelInfo =
-
-    static member ModelInfo =
+[<AbstractClass; Sealed>]
+type internal SsslObjectModel<'T>() =
+    static member val ModelInfo =
         let getCustomName (m: #MemberInfo) isPublic =
             match m.GetCustomAttribute<SsslNameAttribute>() |> Option.ofObj with
             | Some(ssslName) -> Some(ssslName.Name)
             | None ->
                 match m.GetCustomAttribute<DebuggerBrowsableAttribute>() |> Option.ofObj with
                 | Some(db) when db.State = DebuggerBrowsableState.Never -> None
-                | _ ->
-                    if isPublic m then Some(m.Name) else None
+                | _ -> if isPublic m then Some(m.Name) else None
 
         let t = typeof<'T>
         let constructor =
-            if t.IsValueType then Func<'T>(fun () -> Unchecked.defaultof<'T>)
-            else Expression.New(t) |> compile (array.Empty())
+            if t.IsValueType then
+                Func<'T>(fun () -> Unchecked.defaultof<'T>)
+            elif not (isNull (t.GetConstructor(array.Empty()))) then
+                Expression.New(t) |> compile (array.Empty())
+            else null
         let bindingFlags = BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Instance
         let fields = seq {
             for field in t.GetFields(bindingFlags) do
@@ -77,7 +77,7 @@ type internal SsslObjectModel<'T> private () =
                     name, createAccessor (Expression.Property(ob, prop)) prop.PropertyType))
             |> Map
         {
-            CanCreateInstance = not (isNull constructor)
+            CanCreateInstance = isNotNull constructor
             ConvertFrom = fun ob ->
                 let typed = ob :?> 'T
                 seq {

@@ -12,6 +12,10 @@ let parameterOf (t: Type) name = Expression.Parameter(t, name)
 
 let parameter<'T> name = Expression.Parameter(typeof<'T>, name)
 
+let arrayIndex index array = Expression.ArrayAccess(array, [| index |])
+
+let constExpr value = Expression.Constant(box value)
+
 let assignFor right left = Expression.Assign(left, right) :> Expression
 
 let assignTo left right = Expression.Assign(left, right) :> Expression

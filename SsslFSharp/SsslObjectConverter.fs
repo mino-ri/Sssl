@@ -2,32 +2,32 @@
 open System
 open System.Reflection
 open System.Collections.Concurrent
-open System.Collections.Generic
 
 let private cache = ConcurrentDictionary<Type, ObjectModelInfo>()
 
 let private getModelInfo (t: Type) =
     cache.GetOrAdd(t, fun t ->
-        typedefof<SsslObjectModel<_>>.MakeGenericType(t)
+        let isRecord =
+            let att = t.GetCustomAttribute<CompilationMappingAttribute>()
+            isNotNullf att &&
+            (att.SourceConstructFlags = SourceConstructFlags.SumType ||
+             att.SourceConstructFlags = SourceConstructFlags.RecordType)
+        let baseType =
+            if isRecord
+            then typedefof<SsslRecordModel<_>>
+            else typedefof<SsslObjectModel<_>>
+        baseType.MakeGenericType(t)
             .GetProperty("ModelInfo", BindingFlags.Static ||| BindingFlags.NonPublic)
             .GetValue(null)
         :?> ObjectModelInfo)
 
-let tryConvertFrom (converter: ISsslConverter) (value: obj) (expected: Type) =
+let tryConvertFrom (converter: ISsslConverter) (value: obj) expected =
     let t = value.GetType()
-    let values = getModelInfo(t).ConvertFrom(value)
-    let contents = ResizeArray()
-    let rec getValue = function
-        | SEmpty ->
-            Some(Sssl.Record(SsslType.getName expected.Assembly t, SsslRecordType.Braces, contents.ToArray()))
-        | SCons((name, exType, value), tail) ->
-            match converter.TryConvertFrom(value, exType) with
-            | None -> None
-            | Some(ssslValue) ->
-                contents.Add(Sssl.Pair(name, ssslValue))
-                getValue tail
-    use enumerator = values.GetEnumerator()
-    getValue enumerator
+    getModelInfo(t).ConvertFrom(value)
+    |> chooseAll (fun (name, exType, value) ->
+        converter.TryConvertFrom(value, exType)
+        |> Option.map (fun ssslValue -> Sssl.Pair(name, ssslValue)))
+    |> Option.map (fun contents -> Sssl.Record(SsslType.getNameFrom expected t, SsslRecordType.Braces, contents.ToArray()))
 
 let tryConvertTo (converter: ISsslConverter) (options: ObjectConversionOptions) (sssl: Sssl) (expected: Type) =
     let allowUnknownMember = options.HasFlag(ObjectConversionOptions.AllowUnknownMember)
@@ -43,29 +43,14 @@ let tryConvertTo (converter: ISsslConverter) (options: ObjectConversionOptions) 
             (allowUnknownMember || Array.forall existsKey contents) &&
             (allowMissingMember || Seq.forall existsMember modelInfo.RequiredValues)
         if modelInfo.CanCreateInstance && isMembersValid() then
-            let valueMap = ResizeArray()
-            let rec getValues = function
-                | SEmpty -> true
-                | SCons(KeyValue(name, valueType), tail) ->
-                    let converted =
-                        match record.TryGetByName(name) with
-                        | None -> if allowMissingMember then Ok(None) else Error()
-                        | Some(value) ->
-                            match converter.TryConvertTo(value, valueType) with
-                            | None -> Error()
-                            | Some(c) -> Ok(Some(c))
-                    match converted with
-                    | Error() -> false
-                    | Ok(valueOpt) ->
-                        valueOpt |> Option.iter (fun c -> valueMap.Add(name, c))
-                        getValues tail
-            let success =
-                using
-                    ((modelInfo.RequiredValues :> IEnumerable<KeyValuePair<string, Type>>).GetEnumerator())
-                    getValues
-            if success
-            then Some(modelInfo.ConvertTo(upcast valueMap))
-            else None
+            modelInfo.RequiredValues
+            |> chooseAll (fun (KeyValue(name, valueType)) ->
+                match record.TryGetByName(name) with
+                | None -> if allowMissingMember then Some(None) else None
+                | Some(value) ->
+                    converter.TryConvertTo(value, valueType)
+                    |> Option.map (fun v -> Some(name, v)))
+            |> Option.map (fun valueMap -> modelInfo.ConvertTo(Seq.choose id valueMap))
         else
             None
     | _ -> None
