@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sssl.Test", "Sssl.Test\Sssl
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "SsslFSharp", "SsslFSharp\SsslFSharp.fsproj", "{7A8B8D7C-BDAF-4D90-B11C-4F58C393451B}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SsslFSharp.Test", "SsslFSharp.Test\SsslFSharp.Test.fsproj", "{7E1952B0-DE95-4182-B9A4-BEF995CB8BFF}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "SsslFSharp.Test", "SsslFSharp.Test\SsslFSharp.Test.fsproj", "{7E1952B0-DE95-4182-B9A4-BEF995CB8BFF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

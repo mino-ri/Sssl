@@ -28,7 +28,7 @@ let tryConvertFrom (converter: ISsslConverter) (value: obj) expected =
         converter.TryConvertFrom(value, exType)
         |> Option.map (fun ssslValue -> Sssl.Pair(name, ssslValue)))
     |> Option.map (fun contents ->
-        Sssl.Record(SsslType.getNameFrom expected t, SsslRecordType.Braces, contents.ToArray()))
+        Sssl.Record(SsslType.getName expected t, SsslRecordType.Braces, contents.ToArray()))
 
 let tryConvertTo (converter: ISsslConverter) (options: ObjectConversionOptions) (sssl: Sssl) (expected: Type) =
     let allowUnknownMember = options.HasFlag(ObjectConversionOptions.AllowUnknownMember)

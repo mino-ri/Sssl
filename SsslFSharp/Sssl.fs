@@ -50,6 +50,25 @@ type Sssl =
         Sssl.WriteEscaped(textWriter, str)
         builder.ToString()
         
+    static member True = Bool(true)
+
+    static member False = Bool(false)
+
+    static member NaN = Number(nan)
+
+    static member Inf = Number(infinity)
+
+    static member NInf = Number(-infinity)
+
+    static member Tuple(name: string, [<ParamArray>] contents) =
+        Record(name, SsslRecordType.Parentheses, contents)
+
+    static member List(name: string, [<ParamArray>] contents) =
+        Record(name, SsslRecordType.Brackets, contents)
+
+    static member Object(name: string, [<ParamArray>] contents) =
+        Record(name, SsslRecordType.Braces, contents)
+
     member sssl.WriteTo(textWriter: TextWriter, format) =
         let getIndent format indent = System.String(format.IndentChar, indent * format.IndentInterval)
         let rec recSelf sssl indent =

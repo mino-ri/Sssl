@@ -71,7 +71,7 @@ let pairCnv =
                     return Sssl.Pair(name :?> string, valueSssl) |> SsslType.wrapTyped expected pairType
                 else
                     let! nameSssl = converter.TryConvertFrom(name, pairType.TypeArgs.[0])
-                    let typeName = SsslType.getNameFrom expected pairType
+                    let typeName = SsslType.getName expected pairType
                     return Sssl.Record(typeName, SsslRecordType.Parentheses, [| nameSssl; valueSssl |])
             }
     
@@ -107,7 +107,7 @@ let tupleCnv =
                         tupleType.TypeArgs
                         |> Seq.mapi (fun i t -> tuple.[i], t)
                         |> chooseAll converter.TryConvertFrom
-                    let typeName = SsslType.getNameFrom expected tupleType
+                    let typeName = SsslType.getName expected tupleType
                     return Sssl.Record(typeName, SsslRecordType.Parentheses, contents.ToArray())
             }
     
@@ -132,7 +132,7 @@ let dictionaryCnv =
                 let! lst = chooseAllE (fun item -> converter.TryConvertFrom(item, itemType)) enm
                 let name =
                     if itemType = getItemType expected then ""
-                    else SsslType.getName expected.Assembly (getConcreteType itemType)
+                    else SsslType.getName expected (getConcreteType itemType)
                 return Sssl.Record(name, SsslRecordType.Brackets, lst.ToArray())
             }
     
@@ -162,7 +162,7 @@ let arrayCnv =
                 let! lst = chooseAllE (fun item -> converter.TryConvertFrom(item, itemType)) enm
                 let name =
                     if itemType = getItemType expected then ""
-                    else SsslType.getName expected.Assembly (itemType.MakeArrayType())
+                    else SsslType.getName expected (itemType.MakeArrayType())
                 return Sssl.Record(name, SsslRecordType.Brackets, lst.ToArray())
             }
         

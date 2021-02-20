@@ -1,4 +1,6 @@
-﻿open System
+﻿module Program
+
+open System
 open System.Collections.Generic
 open SsslFSharp
 
