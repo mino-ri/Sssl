@@ -1,11 +1,9 @@
 ﻿[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module SsslFSharp.SsslConverter
 open System
-open System.Collections
 open System.Collections.Generic
 open System.Globalization
 open System.Runtime.CompilerServices
-open BoolOption
 
 let inline stringInvariant (value: #IFormattable) =
     Some(value.ToString(null, CultureInfo.InvariantCulture))
@@ -122,61 +120,78 @@ let tupleCnv =
     }
 
 let dictionaryCnv =
-    let getItemType (expected: Type) = typedefof<KeyValuePair<_, _>>.MakeGenericType(expected.TypeArgs)
-    let getConcreteType (expected: Type) = typedefof<Dictionary<_, _>>.MakeGenericType(expected.TypeArgs)
     { new ISsslConverterPart with
         member _.TryConvertFrom(converter, value, expected) =
-            option {
-                let itemType = getItemType (value.GetType())
-                let! enm = tryCast<IEnumerable> value
-                let! lst = chooseAllE (fun item -> converter.TryConvertFrom(item, itemType)) enm
-                let name =
-                    if itemType = getItemType expected then ""
-                    else SsslType.getName expected (getConcreteType itemType)
-                return Sssl.Record(name, SsslRecordType.Brackets, lst.ToArray())
-            }
+            SsslCollectionConverter.tryConvertFrom
+                SsslCollectionConverter.getKeyValuePairType
+                SsslCollectionConverter.makeDictionaryType
+                converter value expected
     
         member _.TryConvertTo(converter, sssl, expected) =
-            match sssl with
-            | Sssl.Record(_, _, contents) ->
-                let itemType = getItemType expected
-                chooseAll (fun item -> converter.TryConvertTo(item, itemType)) contents
-                |> Option.map (fun lst ->
-                    let array = Array.CreateInstance(itemType, contents.Length)
-                    for i = 0 to array.Length - 1 do
-                        array.SetValue(lst.[i], i)
-                    SsslActivator.createCollection (getConcreteType expected) itemType array)
-            | _ -> None
+            let itemType = SsslCollectionConverter.getKeyValuePairType expected
+            let concreteType = SsslCollectionConverter.makeDictionaryType itemType
+            SsslCollectionConverter.tryConvertTo
+                itemType
+                (fun item -> converter.TryConvertTo(item, itemType))
+                (fun array -> SsslActivator.createCollection concreteType itemType array)
+                sssl
+    }
+
+let mapCnv =
+    { new ISsslConverterPart with
+        member _.TryConvertFrom(converter, value, expected) =
+            SsslCollectionConverter.tryConvertFrom
+                SsslCollectionConverter.getKeyValuePairType
+                SsslCollectionConverter.makeMapType
+                converter value expected
+    
+        member _.TryConvertTo(converter, sssl, expected) =
+            let itemType = SsslCollectionConverter.getKeyValuePairType expected
+            let tupleType = SsslCollectionConverter.getTupleType expected
+            let concreteType = SsslCollectionConverter.makeDictionaryType itemType
+            SsslCollectionConverter.tryConvertTo
+                itemType
+                (fun item ->
+                    match converter.TryConvertTo(item, itemType) with
+                    | Some(SsslActivator.DynamicKeyValue(key, value)) ->
+                        Some(SsslActivator.createTuple tupleType [| key; value |])
+                    | _ -> None)
+                (fun array -> SsslActivator.createCollection concreteType tupleType array)
+                sssl
     }
 
 let arrayCnv =
-    let getItemType (expected: Type) =
-        if expected.IsArray then expected.GetElementType()
-        elif expected.TypeArgs.Length = 1 then expected.TypeArgs.[0]
-        else typeof<obj>
     { new ISsslConverterPart with
         member _.TryConvertFrom(converter, value, expected) =
-            option {
-                let itemType = getItemType (value.GetType())
-                let! enm = tryCast<IEnumerable> value
-                let! lst = chooseAllE (fun item -> converter.TryConvertFrom(item, itemType)) enm
-                let name =
-                    if itemType = getItemType expected then ""
-                    else SsslType.getName expected (itemType.MakeArrayType())
-                return Sssl.Record(name, SsslRecordType.Brackets, lst.ToArray())
-            }
+            SsslCollectionConverter.tryConvertFrom
+                SsslCollectionConverter.getEnumerableArg
+                (fun t -> t.MakeArrayType())
+                converter value expected
         
         member _.TryConvertTo(converter, sssl, expected) =
-            match sssl with
-            | Sssl.Record(_, _, contents) ->
-                let itemType = getItemType expected
-                chooseAll (fun item -> converter.TryConvertTo(item, itemType)) contents
-                |> Option.map (fun lst ->
-                    let array = Array.CreateInstance(itemType, contents.Length)
-                    for i = 0 to array.Length - 1 do
-                        array.SetValue(lst.[i], i)
-                    box array)
-            | _ -> None
+            let itemType = SsslCollectionConverter.getEnumerableArg expected
+            SsslCollectionConverter.tryConvertTo
+                itemType
+                (fun item -> converter.TryConvertTo(item, itemType))
+                box
+                sssl
+    }
+
+let listCnv =
+    { new ISsslConverterPart with
+        member _.TryConvertFrom(converter, value, expected) =
+            SsslCollectionConverter.tryConvertFrom
+                SsslCollectionConverter.getEnumerableArg
+                (fun t -> typedefof<_ list>.MakeGenericType(t))
+                converter value expected
+        
+        member _.TryConvertTo(converter, sssl, expected) =
+            let itemType = SsslCollectionConverter.getEnumerableArg expected
+            SsslCollectionConverter.tryConvertTo
+                itemType
+                (fun item -> converter.TryConvertTo(item, itemType))
+                (SsslActivator.createList itemType)
+                sssl
     }
 
 let rawCnv =
@@ -240,7 +255,9 @@ let addBaseValues options builder =
     builder
     |> addWhen (fun _ -> true) (objCnv options)
     |> addWhen (fun t -> t.IsArray || t.IsGenericOfAny(arrayTypes)) arrayCnv
+    |> addWhen (fun t -> t.IsGenericOf(typedefof<_ list>)) listCnv
     |> addWhen (fun t -> t.IsGenericOfAny(dictionaryTypes)) dictionaryCnv
+    |> addWhen (fun t -> t.IsGenericOf(typedefof<Map<_, _>>)) mapCnv
 
 let addPrimitiveValues builder =
     builder

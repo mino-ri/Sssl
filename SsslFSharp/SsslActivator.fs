@@ -3,6 +3,7 @@ open System
 open System.Collections.Generic
 open System.Collections.Concurrent
 open System.Linq.Expressions
+open System.Reflection
 open ExprHelper
 
 // Tuple
@@ -58,6 +59,20 @@ let private createCollectionConstructor (t: Type) (itemType: Type) =
 
 let createCollection (t: Type) (itemType: Type) (source: Array) =
     collectionConstructorCache.GetOrAdd(t, (fun t -> createCollectionConstructor t itemType)).Invoke(source)
+
+type private IListCreator =
+    abstract member Create : array: Array -> obj
+
+type private ListCreator<'T>() =
+    interface IListCreator with
+        member _. Create(array) = array :?> 'T[] |> List.ofArray |> box
+
+let private listCreatorCache = ConcurrentDictionary<Type, IListCreator>()
+
+let createList (itemType: Type) array =
+    listCreatorCache.GetOrAdd(itemType,
+        fun t -> Activator.CreateInstance(typedefof<ListCreator<_>>.MakeGenericType(t)) :?> IListCreator)
+        .Create(array)
 
 let private getDefaultCache = ConcurrentDictionary<Type, obj>()
 

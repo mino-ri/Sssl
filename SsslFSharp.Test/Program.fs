@@ -62,6 +62,7 @@ let main argv =
     test <| box 12.0
     test <| (1, "ABC", Nullable(true))
     test <| [| 1; 3; 5 |]
+    test <| [ 1; 3; 5 ]
     test <| TestType(12, "Me")
     test <| { Id = 0; Name = "You" }
     test <| {| Index = 5; Name = "Them" |}

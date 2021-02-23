@@ -60,6 +60,11 @@ type Sssl =
 
     static member NInf = Number(-infinity)
 
+    static member IsNaN(sssl) =
+        match sssl with
+        | Number(n) when System.Double.IsNaN(n) -> true
+        | _ -> false
+
     static member Tuple(name: string, [<ParamArray>] contents) =
         Record(name, SsslRecordType.Parentheses, contents)
 

@@ -3,6 +3,7 @@ open System
 open System.Collections.Generic
 open SsslFSharp
 open Xunit
+open RightArrow
 
 let private testRecord =
     Sssl.Record("", SsslRecordType.Brackets, [|
@@ -14,7 +15,7 @@ let private getByIndex (sssl: Sssl) (index: int) = sssl.[index]
 
 [<Fact>]
 let ``[int].正常`` () =
-    test getByIndex (testRecord, 0) ==> equal Sssl.Null
+    test getByIndex (testRecord, 0) ==> it ^= Sssl.Null
 
 [<Fact>]
 let ``[int].例外 インデックスが範囲外`` () =
@@ -24,7 +25,7 @@ let private getByName (sssl: Sssl) (name: string) = sssl.[name]
 
 [<Fact>]
 let ``[string].正常`` () =
-    test getByName (testRecord, "Abc") ==> equal (Sssl.Number(12.0))
+    test getByName (testRecord, "Abc") ==> it ^= Sssl.Number(12.0)
 
 [<Fact>]
 let ``[string].例外 キーが存在しない`` () =
@@ -35,8 +36,8 @@ let private tryGetByName (sssl: Sssl) (name: string) =
 
 [<Fact>]
 let ``TryGetByName.正常`` () =
-    test tryGetByName (testRecord, "Abc") ==> (true', equal (Some(Sssl.Number(12.0))))
+    test tryGetByName (testRecord, "Abc") ==> it ^= (true, Some(Sssl.Number(12.0)))
 
 [<Fact>]
 let ``TryGetByName.正常 キーが存在しない`` () =
-    test tryGetByName (testRecord, "Def") ==> (false', equal None)
+    test tryGetByName (testRecord, "Def") ==> it ^= (false, None)

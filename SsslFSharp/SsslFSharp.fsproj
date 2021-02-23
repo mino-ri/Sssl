@@ -23,6 +23,7 @@
     <Compile Include="SsslParser.fs" />
     <Compile Include="SsslConverter.fs" />
     <Compile Include="SsslObjectConverter.fs" />
+    <Compile Include="SsslCollectionConverter.fs" />
     <Compile Include="SsslStandardConverter.fs" />
     <Compile Include="SsslConverterModule.fs" />
     <Compile Include="SsslModule.fs" />
