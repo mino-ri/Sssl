@@ -10,8 +10,8 @@ let private getModelInfo (t: Type) =
         let isRecord =
             let att = t.GetCustomAttribute<CompilationMappingAttribute>()
             isNotNullf att &&
-            (att.SourceConstructFlags = SourceConstructFlags.SumType ||
-             att.SourceConstructFlags = SourceConstructFlags.RecordType)
+            (att.SourceConstructFlags &&& SourceConstructFlags.KindMask = SourceConstructFlags.SumType ||
+             att.SourceConstructFlags &&& SourceConstructFlags.KindMask = SourceConstructFlags.RecordType)
         let baseType =
             if isRecord
             then typedefof<SsslRecordModel<_>>

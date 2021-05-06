@@ -24,9 +24,9 @@ type TestType(id: int, name: string) =
     new() = TestType(0, "")
 
 [<Struct>]
-type TestRecord = { Id: int; Name: string }
+type internal TestRecord = { Id: int; Name: string }
 
-type TestSum =
+type internal TestSum =
     | TestSome of id: int * text: string
     | TestNone
 

@@ -1,10 +1,35 @@
 ﻿module SsslFSharp.Test.SsslConverterTest
+open System
 open System.Collections.Generic
 open Xunit
 open SsslFSharp
 open RightArrow
 
-type TestData = { Id: int; Name: string }
+type TestRecord = { Id: int; Name: string }
+
+type TestUnion =
+    | TestNone
+    | TestSome of id: int * name: string
+
+type TestRecord2 = internal { Id2: int; Name2: string }
+
+type TestUnion2 =
+    internal
+    | TestNone2
+    | TestSome2 of id: int * name: string
+
+type TestObj(id: int, name: string) =
+    member val Id = id with get, set
+    member val Name = name with get, set
+    new() = TestObj(0, "")
+    override this.Equals(other) =
+        match other with
+        | :? TestObj as other -> (this :> IEquatable<TestObj>).Equals(other)
+        | _ -> false
+    override _.GetHashCode() = (id, name).GetHashCode()
+    interface IEquatable<TestObj> with
+        member this.Equals(other) = this.Id = other.Id && this.Name = other.Name
+
 
 [<Fact>]
 let ``convertFrom.正常 null`` () =
@@ -70,12 +95,44 @@ let ``convertFrom.正常 マップ`` () =
     test Sssl.convertFrom map ==> it ^= sssl
 
 [<Fact>]
+let ``convertFrom.正常 レコード`` () =
+    let sssl = Sssl.Object("", [|
+        Sssl.Pair("Id", Sssl.Number(1.0))
+        Sssl.Pair("Name", Sssl.String("Abc"))
+    |])
+    test Sssl.convertFrom { Id = 1; Name = "Abc" } ==> it ^= sssl
+
+[<Fact>]
+let ``convertFrom.正常 非パブリックレコード`` () =
+    let sssl = Sssl.Object("", [|
+        Sssl.Pair("Id2", Sssl.Number(1.0))
+        Sssl.Pair("Name2", Sssl.String("Abc"))
+    |])
+    test Sssl.convertFrom { Id2 = 1; Name2 = "Abc" } ==> it ^= sssl
+
+[<Fact>]
+let ``convertFrom.正常 判別共用体`` () =
+    let sssl = Sssl.Object("TestSome", [|
+        Sssl.Pair("id", Sssl.Number(1.0))
+        Sssl.Pair("name", Sssl.String("Abc"))
+    |])
+    test Sssl.convertFrom (TestSome(1, "Abc")) ==> it ^= sssl
+
+[<Fact>]
+let ``convertFrom.正常 非パブリック判別共用体`` () =
+    let sssl = Sssl.Object("TestSome2", [|
+        Sssl.Pair("id", Sssl.Number(1.0))
+        Sssl.Pair("name", Sssl.String("Abc"))
+    |])
+    test Sssl.convertFrom (TestSome2(1, "Abc")) ==> it ^= sssl
+
+[<Fact>]
 let ``convertFrom.正常 オブジェクト`` () =
     let sssl = Sssl.Object("", [|
         Sssl.Pair("Id", Sssl.Number(0.0))
         Sssl.Pair("Name", Sssl.String("Abc"))
     |])
-    test Sssl.convertFrom { Id = 0; Name = "Abc" } ==> it ^= sssl
+    test Sssl.convertFrom (TestObj(0, "Abc")) ==> it ^= sssl
 
 [<Fact>]
 let ``convertTo.正常 null`` () =
@@ -141,9 +198,41 @@ let ``convertTo.正常 マップ`` () =
     test Sssl.convertTo sssl ==> it ^=@ dict
 
 [<Fact>]
-let ``convertTo.正常 オブジェクト`` () =
+let ``convertTo.正常 レコード`` () =
     let sssl = Sssl.Object("", [|
-        Sssl.Pair("Id", Sssl.Number(0.0))
+        Sssl.Pair("Id", Sssl.Number(1.0))
         Sssl.Pair("Name", Sssl.String("Abc"))
     |])
-    test Sssl.convertTo sssl ==> it ^= { Id = 0; Name = "Abc" }
+    test Sssl.convertTo sssl ==> it ^= { Id = 1; Name = "Abc" }
+
+[<Fact>]
+let ``convertTo.正常 非パブリックレコード`` () =
+    let sssl = Sssl.Object("", [|
+        Sssl.Pair("Id2", Sssl.Number(1.0))
+        Sssl.Pair("Name2", Sssl.String("Abc"))
+    |])
+    test Sssl.convertTo sssl ==> it ^= { Id2 = 1; Name2 = "Abc" }
+
+[<Fact>]
+let ``convertTo.正常 判別共用体`` () =
+    let sssl = Sssl.Object("TestSome", [|
+        Sssl.Pair("id", Sssl.Number(1.0))
+        Sssl.Pair("name", Sssl.String("Abc"))
+    |])
+    test Sssl.convertTo sssl ==> it ^= TestSome(1, "Abc")
+    
+[<Fact>]
+let ``convertTo.正常 非パブリック判別共用体`` () =
+    let sssl = Sssl.Object("TestSome2", [|
+        Sssl.Pair("id", Sssl.Number(1.0))
+        Sssl.Pair("name", Sssl.String("Abc"))
+    |])
+    test Sssl.convertTo sssl ==> it ^= TestSome2(1, "Abc")
+
+[<Fact>]
+let ``convertTo.正常 オブジェクト`` () =
+    let sssl = Sssl.Object("", [|
+        Sssl.Pair("Id", Sssl.Number(1.0))
+        Sssl.Pair("Name", Sssl.String("Abc"))
+    |])
+    test Sssl.convertTo sssl ==> it ^= TestObj(1, "Abc")
